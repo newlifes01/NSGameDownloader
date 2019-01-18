@@ -4,12 +4,15 @@ using System.Data;
 using System.Diagnostics;
 using System.Drawing;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Windows.Forms;
 using ExcelDataReader;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using NSGameDownloader.Properties;
 
@@ -27,6 +30,7 @@ namespace NSGameDownloader
         private const string NutdbUrl = "https://snip.li/nutdb";
         private const string TitleKeysPath = "keys.json";
         private const string ExcelPath = "db.xlsx";
+        private const string CookiePath = "cookie\\cookie";
         private const int EM_SETCUEBANNER = 0x1501;
 
         /// <summary>
@@ -103,6 +107,9 @@ namespace NSGameDownloader
 
         private void Form1_Load(object sender, EventArgs e)
         {
+
+
+
             var tl = new Thread(ThreadLoad);
             tl.Start();
         }
@@ -112,6 +119,11 @@ namespace NSGameDownloader
         /// </summary>
         private void ThreadLoad()
         {
+            if (!Directory.Exists("cookie"))
+                Directory.CreateDirectory("cookie");
+
+            // ReadCookieFile();
+
             if (!File.Exists(TitleKeysPath))
             {
                 var t = new Thread(UpdateTitleKey);
@@ -123,16 +135,41 @@ namespace NSGameDownloader
             }
 
             if (!Directory.Exists("image")) Directory.CreateDirectory("image");
-            //使用api 做占位符
-            Invoke(new Action(() => { SendMessage(textBox_keyword.Handle, EM_SETCUEBANNER, 0, "在这里输入游戏名关键字.."); }));
+            //使用winapi 做占位符
+            Invoke(new Action(() => { SendMessage(textBox_keyword.Handle, EM_SETCUEBANNER, 0, "在这里输入 id,中文名,英文名 关键字..."); }));
 
             SearchGameName();
+        }
+
+        private void Form1_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            File.WriteAllText(TitleKeysPath, _titlekeys.ToString());
+            // WriteCookieFile();
+        }
+
+        private void WriteCookieFile()
+        {
+            File.WriteAllText(CookiePath, JsonConvert.SerializeObject(_cookie));
+        }
+
+        private void ReadCookieFile()
+        {
+            if (File.Exists(CookiePath))
+                _cookie = JsonConvert.DeserializeObject<CookieContainer>(File.ReadAllText(CookiePath));
+            /*
+            var cs = _cookie.GetCookies(new Uri("https://pan.baidu.com"));
+            foreach (Cookie cookie in cs)
+            {
+                InternetSetCookie("https://pan.baidu.com", cookie.Name, cookie.Value);
+            }*/
         }
 
 
         [DllImport("user32.dll", CharSet = CharSet.Auto)]
         private static extern int SendMessage(IntPtr hWnd, int msg, int wParam,
             [MarshalAs(UnmanagedType.LPWStr)] string lParam);
+        [DllImport("wininet.dll", CharSet = CharSet.Auto, SetLastError = true)]
+        public static extern bool InternetSetCookie(string lpszUrlName, string lbszCookieName, string lpszCookieData);
 
         public void UpdateTitleKey()
         {
@@ -230,9 +267,17 @@ namespace NSGameDownloader
 
         private void writePw(string pw)
         {
-            var element = panWebBrowser.Document.GetElementById("nwtz3z5E");
+            //<input class="QKKaIE LxgeIt" id="zvbpPbMk" tabindex="1" type="text">
+            //得到id
+            Console.WriteLine("填密码:" + pw);
+
+            var html = panWebBrowser.DocumentText;
+            var m = Regex.Match(html, "<input class=.*id=\"([\\s\\S]*?)\" tabindex=\"1");
+            var id = m.Groups[1].Value;
+            var element = panWebBrowser.Document.GetElementById(id);
             if (element == null) return;
             element.SetAttribute("value", pw);
+
 
             var alla = panWebBrowser.Document.GetElementsByTagName("a");
             foreach (HtmlElement a in alla)
@@ -246,31 +291,46 @@ namespace NSGameDownloader
         private void webBrowser_DocumentCompleted(object sender, WebBrowserDocumentCompletedEventArgs e)
         {
             var oUrl = WebUtility.UrlDecode(e.Url.ToString());
+            label_url.Text = oUrl;
 
-
-            Console.WriteLine("log:" + oUrl);
             if (panWebBrowser.Document.Body == null) return;
+            GetCookies();
             //缩放页面
             ((SHDocVw.WebBrowser)panWebBrowser.ActiveXInstance).ExecWB(SHDocVw.OLECMDID.OLECMDID_OPTICAL_ZOOM,
                 SHDocVw.OLECMDEXECOPT.OLECMDEXECOPT_DONTPROMPTUSER, 70, IntPtr.Zero);
-            if (panWebBrowser.Document.Body.InnerText != null &&
-                panWebBrowser.Document.Body.InnerText.Contains("请输入提取码"))
+            //识别是不是要输入提取码
+            if (panWebBrowser.Document.Body.InnerText.Contains("请输入提取码"))
             {
-                if (e.Url.ToString().Contains(NspPanKey.Substring(2))) writePw(NspPw);
-                else if (e.Url.ToString().Contains(XciPanKey.Substring(2))) writePw(XciPw);
+                if (e.Url.ToString().Contains(NspPanKey.Substring(3))) writePw(NspPw);
+                else if (e.Url.ToString().Contains(XciPanKey.Substring(3))) writePw(XciPw);
             }
             else
             {
                 if (oUrl == "https://pan.baidu.com/s/1tOFTvpJwikcdo2W12Z8dEw#list/path=/" ||
-                    oUrl == "https://pan.baidu.com/s/1cwIw1-qsNOKaq6xrK0VUqQ#list/path=/")
+                  oUrl == "https://pan.baidu.com/s/1cwIw1-qsNOKaq6xrK0VUqQ#list/path=/")
                     WebRefresh(); //输入密码后会再一次来到根目录,要再跳一次
+            }
+        }
+
+        private CookieContainer _cookie = new CookieContainer();
+        private void GetCookies()
+        {
+            var str = panWebBrowser.Document.Cookie.Replace(",", "%2C");
+            var cookies = str.Split(';');
+            foreach (var c in cookies)
+            {
+                var kv = c.Split('=');
+                var cookie = new Cookie(kv[0].Trim(), kv.Length == 0 ? "" : kv[1].Trim());
+                _cookie.Add(new Uri("https://pan.baidu.com"), cookie);
             }
         }
 
         private void WebRefresh()
         {
             if (_curTid == null) return;
-            Navigate(GetPanUrl(_curTid)); //点击刷新 只找本体
+            var url = GetPanUrl(_curTid);
+            Console.WriteLine("打开:" + url);
+            panWebBrowser.Navigate(url); //点击刷新 只找本体
         }
 
 
@@ -282,12 +342,6 @@ namespace NSGameDownloader
         }
 
 
-        private void Navigate(string url)
-        {
-            //todo 多线程
-
-            panWebBrowser.Url = new Uri(url);
-        }
 
         private void button_search_Click(object sender, EventArgs e)
         {
@@ -306,7 +360,11 @@ namespace NSGameDownloader
                 //todo 多关键字处理
                 listView1.Items.Clear();
                 foreach (var titlekey in _titlekeys)
-                    if (titlekey.Value["cname"].ToString().ToLower().Contains(keywords.Trim().ToLower()))
+                {
+                    //全文件查找
+                    var allstr = titlekey.Value["tid"].ToString() + titlekey.Value["cname"] + titlekey.Value["ename"] + titlekey.Value["allnames"];
+
+                    if (allstr.ToLower().Contains(keywords.Trim().ToLower()))
                         listView1.Items.Add(new ListViewItem(new[]
                         {
                             titlekey.Value["tid"].ToString(),
@@ -318,6 +376,8 @@ namespace NSGameDownloader
                             titlekey.Value["upd"].ToObject<bool>() ? "●" : "",
                             titlekey.Value["dlc"].ToObject<bool>() ? "●" : ""
                         }));
+                }
+
                 label_count.Text = "count:" + listView1.Items.Count;
             }));
         }
@@ -373,12 +433,11 @@ namespace NSGameDownloader
                     try
                     {
                         var url = $"https://ec.nintendo.com/apps/{_curTid}/{g["region"]}";
-                        Console.WriteLine(url);
                         var html = web.DownloadString(url);
-                        html = html.Split(new[] { "NXSTORE.titleDetail.jsonData = " },
-                                StringSplitOptions.RemoveEmptyEntries)[1]
-                            .Split(new[] { "NXSTORE.titleDetail" }, StringSplitOptions.RemoveEmptyEntries)[0]
-                            .Replace(";", "");
+
+                        html = html.Split(new[] { "NXSTORE.titleDetail.jsonData = " }, StringSplitOptions.RemoveEmptyEntries)[1];
+                        html = html.Split(new[] { "NXSTORE.titleDetail" }, StringSplitOptions.RemoveEmptyEntries)[0];
+                        html = html.Replace(";", "");
 
                         _titlekeys[_curTid]["info"] = JObject.Parse(html);
                     }
@@ -452,11 +511,6 @@ namespace NSGameDownloader
             SearchGameName(textBox_keyword.Text);
         }
 
-        private void Form1_FormClosing(object sender, FormClosingEventArgs e)
-        {
-            File.WriteAllText(TitleKeysPath, _titlekeys.ToString());
-        }
-
         private void 更新TitleId文件ToolStripMenuItem_Click(object sender, EventArgs e)
         {
             var t = new Thread(UpdateTitleKey);
@@ -481,6 +535,30 @@ namespace NSGameDownloader
         private void 关于ToolStripMenuItem_Click(object sender, EventArgs e)
         {
             Process.Start("https://github.com/ningxiaoxiao/NSGameDownloader");
+        }
+
+        private void label_url_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                Clipboard.SetDataObject(label_url.Text, true);
+                MessageBox.Show("已经复制到剪贴版上", "复制成功", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            catch (Exception exception)
+            {
+                MessageBox.Show(exception.Message, "复制失败", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+
+        }
+
+        private void panWebBrowser_Navigating(object sender, WebBrowserNavigatingEventArgs e)
+        {
+            Console.WriteLine("Navigating:" + e.Url);
+        }
+
+        private void panWebBrowser_Navigated(object sender, WebBrowserNavigatedEventArgs e)
+        {
+            //GetCookies();
         }
     }
 }

@@ -57,6 +57,7 @@
             this.label1 = new System.Windows.Forms.Label();
             this.label_count = new System.Windows.Forms.Label();
             this.radioButton_upd = new System.Windows.Forms.RadioButton();
+            this.label_url = new System.Windows.Forms.Label();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox_gameicon)).BeginInit();
             this.menuStrip1.SuspendLayout();
             this.statusStrip1.SuspendLayout();
@@ -85,12 +86,14 @@
             this.panWebBrowser.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-            this.panWebBrowser.Location = new System.Drawing.Point(494, 28);
+            this.panWebBrowser.Location = new System.Drawing.Point(494, 55);
             this.panWebBrowser.MinimumSize = new System.Drawing.Size(20, 20);
             this.panWebBrowser.Name = "panWebBrowser";
-            this.panWebBrowser.Size = new System.Drawing.Size(536, 496);
+            this.panWebBrowser.Size = new System.Drawing.Size(732, 476);
             this.panWebBrowser.TabIndex = 2;
             this.panWebBrowser.DocumentCompleted += new System.Windows.Forms.WebBrowserDocumentCompletedEventHandler(this.webBrowser_DocumentCompleted);
+            this.panWebBrowser.Navigated += new System.Windows.Forms.WebBrowserNavigatedEventHandler(this.panWebBrowser_Navigated);
+            this.panWebBrowser.Navigating += new System.Windows.Forms.WebBrowserNavigatingEventHandler(this.panWebBrowser_Navigating);
             // 
             // radioButton_nsp
             // 
@@ -183,7 +186,7 @@
             | System.Windows.Forms.AnchorStyles.Left)));
             this.label_info.Location = new System.Drawing.Point(118, 337);
             this.label_info.Name = "label_info";
-            this.label_info.Size = new System.Drawing.Size(358, 175);
+            this.label_info.Size = new System.Drawing.Size(358, 182);
             this.label_info.TabIndex = 8;
             this.label_info.Text = "0GB";
             // 
@@ -194,7 +197,7 @@
             this.帮助ToolStripMenuItem});
             this.menuStrip1.Location = new System.Drawing.Point(0, 0);
             this.menuStrip1.Name = "menuStrip1";
-            this.menuStrip1.Size = new System.Drawing.Size(1042, 25);
+            this.menuStrip1.Size = new System.Drawing.Size(1238, 25);
             this.menuStrip1.TabIndex = 100;
             this.menuStrip1.Text = "menuStrip1";
             // 
@@ -260,9 +263,9 @@
             // 
             this.statusStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.toolStripProgressBar_download});
-            this.statusStrip1.Location = new System.Drawing.Point(0, 532);
+            this.statusStrip1.Location = new System.Drawing.Point(0, 539);
             this.statusStrip1.Name = "statusStrip1";
-            this.statusStrip1.Size = new System.Drawing.Size(1042, 22);
+            this.statusStrip1.Size = new System.Drawing.Size(1238, 22);
             this.statusStrip1.TabIndex = 101;
             this.statusStrip1.Text = "statusStrip1";
             // 
@@ -279,7 +282,7 @@
             this.label1.AutoSize = true;
             this.label1.Cursor = System.Windows.Forms.Cursors.Hand;
             this.label1.ForeColor = System.Drawing.Color.DimGray;
-            this.label1.Location = new System.Drawing.Point(8, 512);
+            this.label1.Location = new System.Drawing.Point(8, 519);
             this.label1.Name = "label1";
             this.label1.Size = new System.Drawing.Size(215, 12);
             this.label1.TabIndex = 102;
@@ -307,11 +310,23 @@
             this.radioButton_upd.UseVisualStyleBackColor = true;
             this.radioButton_upd.Click += new System.EventHandler(this.radioButton_Click);
             // 
+            // label_url
+            // 
+            this.label_url.Location = new System.Drawing.Point(494, 28);
+            this.label_url.Name = "label_url";
+            this.label_url.Size = new System.Drawing.Size(732, 21);
+            this.label_url.TabIndex = 105;
+            this.label_url.Text = "label2";
+            this.label_url.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+            this.label_url.UseMnemonic = false;
+            this.label_url.Click += new System.EventHandler(this.label_url_Click);
+            // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(1042, 554);
+            this.ClientSize = new System.Drawing.Size(1238, 561);
+            this.Controls.Add(this.label_url);
             this.Controls.Add(this.radioButton_upd);
             this.Controls.Add(this.label_count);
             this.Controls.Add(this.label1);
@@ -371,6 +386,7 @@
         private System.Windows.Forms.RadioButton radioButton_upd;
         private System.Windows.Forms.ColumnHeader columnHeader5;
         private System.Windows.Forms.ColumnHeader columnHeader6;
+        private System.Windows.Forms.Label label_url;
     }
 }
 
