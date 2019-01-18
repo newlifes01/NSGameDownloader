@@ -7,7 +7,4 @@
 
 推荐使用 [超强大的网盘下载器](https://pandownload.com/)
 
-
-![](https://s2.ax1x.com/2019/01/15/FzoxhV.png)
-
-> 特别感谢@91wil.riggzh
+特别感谢@91wil.riggzh
